@@ -32,6 +32,9 @@ let homepageMoviesCache = {
   payload: null,
 };
 
+const adsenseMetaTag = `
+  <meta name="google-adsense-account" content="ca-pub-6812141646808986">`;
+
 const adsenseScript = `
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6812141646808986"
        crossorigin="anonymous"></script>`;
@@ -126,15 +129,19 @@ app.get("/homepage-movies.json", async (req, res) => {
   }
 });
 
-// Serve the homepage with Google AdSense and the dynamic poster loader inserted
-// into <head>, while keeping the checked-in HTML easy to edit independently.
+// Serve the homepage with Google AdSense verification, AdSense loader, and the
+// dynamic poster loader inserted into <head>.
 app.get("/", (req, res, next) => {
   fs.readFile(indexFile, "utf8", (error, html) => {
     if (error) return next(error);
 
     let page = html;
 
-    if (!page.includes("ca-pub-6812141646808986")) {
+    if (!page.includes('name="google-adsense-account"')) {
+      page = page.replace("</head>", `${adsenseMetaTag}\n</head>`);
+    }
+
+    if (!page.includes("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js")) {
       page = page.replace("</head>", `${adsenseScript}\n</head>`);
     }
 
