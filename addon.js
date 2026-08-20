@@ -10,6 +10,7 @@ const CONFIG = {
   MAX_CAST_MEMBERS: 5,
   DEFAULT_LANGUAGE: "tl",
   R18_CACHE_MS: 60 * 60 * 1000,
+  CERTIFICATION_CHECK_CONCURRENCY: 5,
 };
 
 if (!CONFIG.TMDB_API_KEY) {
@@ -27,7 +28,7 @@ const tmdbClient = axios.create({
 
 const manifest = {
   id: process.env.ADDON_ID || "org.filipinomoviesaddon.personal",
-  version: "1.2.0",
+  version: "1.2.1",
   name: process.env.ADDON_NAME || "Pinoy Movies",
   description: "Philippines R-18 movies from TMDB.",
   types: ["movie"],
@@ -51,6 +52,7 @@ const builder = new addonBuilder(manifest);
 
 const tmdbToStremioIdCache = new Map();
 const imdbToTmdbIdCache = new Map();
+const phR18CertificationCache = new Map();
 
 let r18CatalogCache = {
   expiresAt: 0,
@@ -66,6 +68,12 @@ const parseTmdbId = (id) => {
   const match = /^tmdb:(\d+)$/.exec(id);
   return match ? match[1] : null;
 };
+
+const normalizeCertification = (certification) =>
+  String(certification || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[‐‑‒–—−]/g, "-");
 
 const logApiError = (error, context) => {
   console.error(
@@ -170,6 +178,32 @@ const toCatalogMeta = async (movie) => ({
   description: movie.overview || undefined,
 });
 
+async function hasPhilippinesR18Certification(tmdbId) {
+  const key = String(tmdbId);
+
+  if (phR18CertificationCache.has(key)) {
+    return phR18CertificationCache.get(key);
+  }
+
+  try {
+    const { data } = await tmdbClient.get(`/movie/${key}/release_dates`);
+    const philippines = (data.results || []).find(
+      (entry) => entry.iso_3166_1 === "PH"
+    );
+
+    const isR18 = (philippines?.release_dates || []).some(
+      (release) => normalizeCertification(release.certification) === "R-18"
+    );
+
+    phR18CertificationCache.set(key, isR18);
+    return isR18;
+  } catch (error) {
+    logApiError(error, `release_dates:${key}`);
+    // Strict mode: if the certification cannot be verified, exclude the movie.
+    return false;
+  }
+}
+
 async function loadR18CatalogMovies() {
   const now = Date.now();
 
@@ -178,7 +212,7 @@ async function loadR18CatalogMovies() {
   }
 
   const movies = [];
-  const seenIds = new Set();
+  const checkedIds = new Set();
   let page = 1;
   let totalPages = 1;
 
@@ -192,12 +226,33 @@ async function loadR18CatalogMovies() {
 
     totalPages = Math.min(Number(data.total_pages) || 1, 500);
 
-    for (const movie of data.results || []) {
-      if (!movie?.id || !movie?.title || !movie?.poster_path) continue;
-      if (seenIds.has(movie.id)) continue;
+    const candidates = (data.results || []).filter((movie) => {
+      if (!movie?.id || !movie?.title || !movie?.poster_path) return false;
+      if (checkedIds.has(movie.id)) return false;
+      checkedIds.add(movie.id);
+      return true;
+    });
 
-      seenIds.add(movie.id);
-      movies.push(movie);
+    for (
+      let index = 0;
+      index < candidates.length;
+      index += CONFIG.CERTIFICATION_CHECK_CONCURRENCY
+    ) {
+      const batch = candidates.slice(
+        index,
+        index + CONFIG.CERTIFICATION_CHECK_CONCURRENCY
+      );
+
+      const verified = await Promise.all(
+        batch.map(async (movie) => ({
+          movie,
+          isR18: await hasPhilippinesR18Certification(movie.id),
+        }))
+      );
+
+      for (const result of verified) {
+        if (result.isR18) movies.push(result.movie);
+      }
     }
 
     page += 1;
@@ -213,15 +268,7 @@ async function loadR18CatalogMovies() {
 
 export async function isAdultMovie(stremioId) {
   const tmdbId = await resolveTmdbMovieId(stremioId);
-  const { data } = await tmdbClient.get(`/movie/${tmdbId}/release_dates`);
-
-  const philippines = (data.results || []).find(
-    (entry) => entry.iso_3166_1 === "PH"
-  );
-
-  return (philippines?.release_dates || []).some(
-    (release) => String(release.certification || "").toUpperCase() === "R-18"
-  );
+  return hasPhilippinesR18Certification(tmdbId);
 }
 
 export async function getAdultHomepageMovies(limit = 6) {
