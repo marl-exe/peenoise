@@ -1,17 +1,22 @@
 {
-  "name": "stremio_addon",
-  "version": "1.0.0",
+  "name": "peenoise",
+  "version": "1.2.0",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start:prod": "pm2 start server.js --name stremio-filipino-movies",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --check addon.js && node --check server.js && node --check public/homepage.js"
   },
-  "keywords": [],
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "philippines",
+    "r-18",
+    "tmdb"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": "Stremio addon for Filipino movies from TMDB",
+  "license": "BSD-3-Clause",
+  "description": "Stremio catalog addon for Philippine R-18 movies using TMDB",
   "dependencies": {
     "@stremio-addon/compat": "^1.0.0",
     "axios": "^1.7.7",
