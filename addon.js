@@ -156,7 +156,7 @@ builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
         page,
         sort_by: "primary_release_date.desc",
         with_original_language: CONFIG.DEFAULT_LANGUAGE,
-        include_adult: false,
+        include_adult: true,
         include_video: false,
         "primary_release_date.lte": new Date().toISOString().slice(0, 10),
       },
