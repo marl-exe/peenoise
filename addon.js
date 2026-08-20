@@ -43,7 +43,7 @@ const manifest = {
     { name: "meta", types: ["movie"], idPrefixes: ["tt", "tmdb:"] },
     { name: "stream", types: ["movie"], idPrefixes: ["tt"] },
   ],
-  logo: "https://res.cloudinary.com/dlvr5hpzp/image/upload/v1729859442/Vivamax_app_icon_mfsyys.jpg",
+  logo: process.env.ADDON_LOGO || "https://peenoise.onrender.com/logo.svg",
 };
 
 const builder = new addonBuilder(manifest);
