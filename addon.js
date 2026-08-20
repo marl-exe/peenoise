@@ -162,8 +162,12 @@ builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
       },
     });
 
+    // Keep only titles TMDB explicitly flags as adult content. include_adult=true
+    // merely allows those titles into discover results; this filter makes the
+    // Peenoise catalog adult-only.
     const movies = (data.results || []).filter(
-      (movie) => movie?.id && movie?.title && movie?.poster_path
+      (movie) =>
+        movie?.adult === true && movie?.id && movie?.title && movie?.poster_path
     );
 
     const metas = await Promise.all(
