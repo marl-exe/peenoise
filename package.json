@@ -16,7 +16,7 @@
   ],
   "author": "",
   "license": "BSD-3-Clause",
-  "description": "Stremio catalog addon for Philippine R-18 movies using TMDB",
+  "description": "Stremio catalog addon for Philippines R-18 movies using TMDB",
   "dependencies": {
     "@stremio-addon/compat": "^1.0.0",
     "axios": "^1.7.7",
