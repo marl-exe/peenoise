@@ -3,7 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { getRouter } from "@stremio-addon/compat";
-import addonInterface from "./addon.js";
+import addonInterface, {
+  getAdultHomepageMovies,
+  isAdultMovie,
+} from "./addon.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,11 +48,13 @@ async function getHomepageMovies() {
     return homepageMoviesCache.payload;
   }
 
-  // Resolve manually pinned IMDb IDs first. Each one uses the addon's existing
-  // meta handler, so TMDB_API_KEY remains server-side and is never exposed.
+  // Resolve manually pinned IMDb IDs first, but only keep titles that TMDB
+  // explicitly marks as adult content. The API key remains server-side.
   const pinnedResults = await Promise.all(
     pinnedMovieIds.map(async (id) => {
       try {
+        if (!(await isAdultMovie(id))) return null;
+
         const response = await addonInterface.get("meta", "movie", id, {}, null);
         const meta = response?.meta;
         return meta?.id && meta?.poster ? meta : null;
@@ -62,19 +67,13 @@ async function getHomepageMovies() {
 
   const resolvedPinned = pinnedResults.filter(Boolean);
 
-  // Fill any remaining positions with the current latest Filipino movie catalog.
+  // Fill remaining positions from a dedicated adult-only TMDB feed. This is
+  // intentionally separate from the Stremio catalog, which remains mixed.
   let latestMovies = [];
   try {
-    const response = await addonInterface.get(
-      "catalog",
-      "movie",
-      "filipino_movies",
-      {},
-      null
-    );
-    latestMovies = Array.isArray(response?.metas) ? response.metas : [];
+    latestMovies = await getAdultHomepageMovies(MAX_HOMEPAGE_MOVIES);
   } catch (error) {
-    console.warn("Unable to load latest homepage movies:", error.message);
+    console.warn("Unable to load adult homepage movies:", error.message);
   }
 
   const selected = [];
@@ -114,8 +113,8 @@ async function getHomepageMovies() {
 }
 
 // JSON endpoint used only by the landing page. Hybrid selection order:
-// 1) HOMEPAGE_MOVIES IMDb IDs, in the configured order
-// 2) latest catalog movies until six slots are filled
+// 1) adult HOMEPAGE_MOVIES IMDb IDs, in the configured order
+// 2) latest adult-only TMDB movies until six slots are filled
 app.get("/homepage-movies.json", async (req, res) => {
   try {
     const payload = await getHomepageMovies();
@@ -173,7 +172,7 @@ const server = app.listen(port, "0.0.0.0", () => {
   console.log(
     pinnedMovieIds.length
       ? `Homepage pinned movies: ${pinnedMovieIds.join(", ")}`
-      : "Homepage pinned movies: none (showing latest movies)"
+      : "Homepage pinned movies: none (showing latest adult titles)"
   );
 });
 
