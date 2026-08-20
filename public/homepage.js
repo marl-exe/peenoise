@@ -17,7 +17,7 @@
 
       .poster.poster-live:hover {
         transform: translateY(-3px) scale(1.015);
-        border-color: rgba(167, 139, 250, .42);
+        border-color: rgba(239, 68, 68, .48);
         box-shadow: inset 0 -52px 48px rgba(0, 0, 0, .78), 0 10px 24px rgba(0, 0, 0, .28);
       }
 
@@ -55,17 +55,20 @@
   };
 
   const setPreviewHeading = (hasPinnedMovies) => {
-    if (!hasPinnedMovies) return;
+    const heading = document.getElementById("previewHeading");
+    const subtitle = document.getElementById("previewSubtitle");
 
-    const appBody = document.querySelector(".app-body");
-    if (!appBody) return;
+    if (heading) {
+      heading.textContent = hasPinnedMovies
+        ? "Featured Philippine R-18 Movies"
+        : "Philippine R-18 Movies";
+    }
 
-    const divs = Array.from(appBody.querySelectorAll("div"));
-    const heading = divs.find((node) => node.textContent.trim() === "Latest Pinoy Movies");
-    const subtitle = divs.find((node) => node.textContent.trim() === "Fresh picks from TMDB");
-
-    if (heading) heading.textContent = "Featured Pinoy Movies";
-    if (subtitle) subtitle.textContent = "Pinned picks + latest releases";
+    if (subtitle) {
+      subtitle.textContent = hasPinnedMovies
+        ? "Pinned R-18 picks + newest releases"
+        : "Newest certified R-18 releases";
+    }
   };
 
   const renderMovies = (movies) => {
@@ -116,9 +119,9 @@
       const data = await response.json();
       const movies = Array.isArray(data.movies) ? data.movies : [];
 
+      setPreviewHeading((data.pinnedCount || 0) > 0);
       if (!movies.length) return;
 
-      setPreviewHeading((data.pinnedCount || 0) > 0);
       renderMovies(movies);
     } catch (error) {
       console.warn("Peenoise homepage posters could not be loaded:", error);
