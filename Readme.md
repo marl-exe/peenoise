@@ -1,6 +1,6 @@
-# Peenoise — Philippine R-18 Movies for Stremio
+# Peenoise — Philippines R-18 Movies for Stremio
 
-Peenoise is an independent Stremio catalog and metadata addon focused on Philippine movies carrying a Philippine **R-18** certification in TMDB. It exposes those titles through Stremio-compatible catalog and metadata endpoints and includes a lightweight web landing page for installation and discovery.
+Peenoise is an independent Stremio catalog and metadata addon focused on movies from the Philippines carrying a Philippine **R-18** certification in TMDB. It exposes those titles through Stremio-compatible catalog and metadata endpoints and includes a lightweight web landing page for installation and discovery.
 
 > **18+ only.** The catalog is intended for adults. Peenoise is an independent community addon and is not affiliated with or endorsed by Stremio.
 
@@ -30,7 +30,7 @@ The addon loads all matching TMDB result pages, de-duplicates titles, caches the
 
 ## Features
 
-- Philippine R-18 movie catalog sourced from TMDB
+- Philippines R-18 movie catalog sourced from TMDB
 - Stremio `catalog`, `meta`, and `stream` resources
 - IMDb IDs when available, with `tmdb:<id>` fallback
 - TMDB-to-IMDb and IMDb-to-TMDB ID resolution
@@ -107,7 +107,7 @@ Example:
 HOMEPAGE_MOVIES=tt1234567,tt2345678,tt3456789
 ```
 
-Valid pinned R-18 titles are displayed first in the configured order. Any remaining homepage slots are filled from the newest titles in the same Philippine R-18 catalog, up to six movies total.
+Valid pinned R-18 titles are displayed first in the configured order. Any remaining homepage slots are filled from the newest titles in the same Philippines R-18 catalog, up to six movies total.
 
 ## Main Endpoints
 
@@ -115,7 +115,7 @@ Valid pinned R-18 titles are displayed first in the configured order. Any remain
 | --- | --- |
 | `/` | Peenoise landing and installation page |
 | `/manifest.json` | Stremio addon manifest |
-| `/catalog/movie/filipino_movies.json` | Philippine R-18 movie catalog |
+| `/catalog/movie/filipino_movies.json` | Philippines R-18 movie catalog |
 | `/meta/movie/:id.json` | Movie metadata |
 | `/stream/movie/:id.json` | Valid Stremio stream endpoint; currently returns no streams |
 | `/homepage-movies.json` | Landing-page R-18 movie selection API |
