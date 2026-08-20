@@ -1,6 +1,6 @@
-const { addonBuilder } = require("stremio-addon-sdk");
-const axios = require("axios");
-require("dotenv").config();
+import { addonBuilder } from "@stremio-addon/compat";
+import axios from "axios";
+import "dotenv/config";
 
 const CONFIG = {
   TMDB_API_KEY: process.env.TMDB_API_KEY,
@@ -256,4 +256,4 @@ builder.defineStreamHandler(async ({ type, id }) => {
   return { streams: [] };
 });
 
-module.exports = builder.getInterface();
+export default builder.getInterface();

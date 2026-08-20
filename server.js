@@ -1,8 +1,12 @@
-const fs = require("fs");
-const path = require("path");
-const express = require("express");
-const { getRouter } = require("stremio-addon-sdk");
-const addonInterface = require("./addon");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import express from "express";
+import { getRouter } from "@stremio-addon/compat";
+import addonInterface from "./addon.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = Number.parseInt(process.env.PORT || "7000", 10);
@@ -157,6 +161,9 @@ app.use(getRouter(addonInterface));
 
 // Simple JSON 404 for anything that is neither a static asset nor addon route.
 app.use((req, res) => {
+  // @stremio-addon/compat continues to the next Express middleware after it
+  // sends a protocol response, so avoid writing a second response here.
+  if (res.headersSent) return;
   res.status(404).json({ error: "Not found" });
 });
 
