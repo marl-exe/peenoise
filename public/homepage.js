@@ -60,8 +60,8 @@
 
     if (heading) {
       heading.textContent = hasPinnedMovies
-        ? "Featured Philippine R-18 Movies"
-        : "Philippine R-18 Movies";
+        ? "Featured Philippines R-18 Movies"
+        : "Philippines R-18 Movies";
     }
 
     if (subtitle) {
