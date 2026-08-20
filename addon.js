@@ -9,6 +9,7 @@ const CONFIG = {
   ITEMS_PER_PAGE: 20,
   MAX_CAST_MEMBERS: 5,
   DEFAULT_LANGUAGE: "tl",
+  R18_CACHE_MS: 60 * 60 * 1000,
 };
 
 if (!CONFIG.TMDB_API_KEY) {
@@ -26,15 +27,15 @@ const tmdbClient = axios.create({
 
 const manifest = {
   id: process.env.ADDON_ID || "org.filipinomoviesaddon.personal",
-  version: "1.1.0",
+  version: "1.2.0",
   name: process.env.ADDON_NAME || "Pinoy Movies",
-  description: "Latest Filipino movies from TMDB.",
+  description: "Philippine R-18 movies from TMDB.",
   types: ["movie"],
   catalogs: [
     {
       type: "movie",
       id: "filipino_movies",
-      name: "Latest Pinoy Movies",
+      name: "Philippine R-18 Movies",
       extra: [{ name: "skip", isRequired: false }],
     },
   ],
@@ -50,6 +51,11 @@ const builder = new addonBuilder(manifest);
 
 const tmdbToStremioIdCache = new Map();
 const imdbToTmdbIdCache = new Map();
+
+let r18CatalogCache = {
+  expiresAt: 0,
+  movies: null,
+};
 
 const getImageUrl = (path, size = "w500") =>
   path ? `${CONFIG.IMAGE_BASE_URL}/${size}${path}` : undefined;
@@ -84,6 +90,17 @@ const toReleased = (releaseDate) => {
   const date = new Date(`${releaseDate}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
+
+const getR18DiscoverParams = () => ({
+  sort_by: "primary_release_date.desc",
+  include_adult: true,
+  include_video: false,
+  region: "PH",
+  certification_country: "PH",
+  certification: "R-18",
+  with_origin_country: "PH",
+  "primary_release_date.lte": new Date().toISOString().slice(0, 10),
+});
 
 async function getStremioIdForTmdbMovie(tmdbId) {
   const key = String(tmdbId);
@@ -153,6 +170,47 @@ const toCatalogMeta = async (movie) => ({
   description: movie.overview || undefined,
 });
 
+async function loadR18CatalogMovies() {
+  const now = Date.now();
+
+  if (r18CatalogCache.movies && r18CatalogCache.expiresAt > now) {
+    return r18CatalogCache.movies;
+  }
+
+  const movies = [];
+  const seenIds = new Set();
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const { data } = await tmdbClient.get("/discover/movie", {
+      params: {
+        ...getR18DiscoverParams(),
+        page,
+      },
+    });
+
+    totalPages = Math.min(Number(data.total_pages) || 1, 500);
+
+    for (const movie of data.results || []) {
+      if (!movie?.id || !movie?.title || !movie?.poster_path) continue;
+      if (seenIds.has(movie.id)) continue;
+
+      seenIds.add(movie.id);
+      movies.push(movie);
+    }
+
+    page += 1;
+  } while (page <= totalPages);
+
+  r18CatalogCache = {
+    movies,
+    expiresAt: now + CONFIG.R18_CACHE_MS,
+  };
+
+  return movies;
+}
+
 export async function isAdultMovie(stremioId) {
   const tmdbId = await resolveTmdbMovieId(stremioId);
   const { data } = await tmdbClient.get(`/movie/${tmdbId}/release_dates`);
@@ -170,42 +228,9 @@ export async function getAdultHomepageMovies(limit = 6) {
   const maxItems = Math.max(0, Number.parseInt(String(limit), 10) || 0);
   if (maxItems === 0) return [];
 
-  const selected = [];
-  const seenIds = new Set();
-  const maxPages = 10;
-
-  for (let page = 1; page <= maxPages && selected.length < maxItems; page += 1) {
-    const { data } = await tmdbClient.get("/discover/movie", {
-      params: {
-        page,
-        sort_by: "primary_release_date.desc",
-        include_adult: true,
-        include_video: false,
-        region: "PH",
-        certification_country: "PH",
-        certification: "R-18",
-        with_origin_country: "PH",
-        "primary_release_date.lte": new Date().toISOString().slice(0, 10),
-      },
-    });
-
-    const adultMovies = (data.results || []).filter(
-      (movie) => movie?.id && movie?.title && movie?.poster_path
-    );
-
-    for (const movie of adultMovies) {
-      const meta = await toCatalogMeta(movie);
-      if (!meta?.id || seenIds.has(meta.id)) continue;
-
-      seenIds.add(meta.id);
-      selected.push(meta);
-      if (selected.length >= maxItems) break;
-    }
-
-    if (page >= (data.total_pages || 0)) break;
-  }
-
-  return selected;
+  const movies = await loadR18CatalogMovies();
+  const selected = movies.slice(0, maxItems);
+  return Promise.all(selected.map(toCatalogMeta));
 }
 
 builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
@@ -215,26 +240,9 @@ builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
 
   try {
     const skip = Math.max(0, Number.parseInt(extra.skip || "0", 10) || 0);
-    const page = Math.floor(skip / CONFIG.ITEMS_PER_PAGE) + 1;
-
-    const { data } = await tmdbClient.get("/discover/movie", {
-      params: {
-        page,
-        sort_by: "primary_release_date.desc",
-        with_original_language: CONFIG.DEFAULT_LANGUAGE,
-        include_adult: true,
-        include_video: false,
-        "primary_release_date.lte": new Date().toISOString().slice(0, 10),
-      },
-    });
-
-    // The Stremio catalog includes both regular and adult titles. Adult-only
-    // filtering is intentionally limited to the website homepage poster feed.
-    const movies = (data.results || []).filter(
-      (movie) => movie?.id && movie?.title && movie?.poster_path
-    );
-
-    const metas = await Promise.all(movies.map(toCatalogMeta));
+    const movies = await loadR18CatalogMovies();
+    const pageMovies = movies.slice(skip, skip + CONFIG.ITEMS_PER_PAGE);
+    const metas = await Promise.all(pageMovies.map(toCatalogMeta));
 
     return {
       metas,
