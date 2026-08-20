@@ -15,6 +15,7 @@ const app = express();
 const port = Number.parseInt(process.env.PORT || "7000", 10);
 const publicDir = path.join(__dirname, "public");
 const indexFile = path.join(publicDir, "index.html");
+const donateFile = path.join(publicDir, "donate.html");
 const MAX_HOMEPAGE_MOVIES = 6;
 const HOMEPAGE_CACHE_MS = 15 * 60 * 1000;
 
@@ -151,6 +152,10 @@ app.get("/", (req, res, next) => {
 
     res.type("html").send(page);
   });
+});
+
+app.get("/donate", (req, res) => {
+  res.sendFile(donateFile);
 });
 
 // Serve the remaining static assets without automatically serving index.html.
