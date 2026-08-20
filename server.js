@@ -8,21 +8,136 @@ const app = express();
 const port = Number.parseInt(process.env.PORT || "7000", 10);
 const publicDir = path.join(__dirname, "public");
 const indexFile = path.join(publicDir, "index.html");
+const MAX_HOMEPAGE_MOVIES = 6;
+const HOMEPAGE_CACHE_MS = 15 * 60 * 1000;
+
+const pinnedMovieIds = Array.from(
+  new Set(
+    (process.env.HOMEPAGE_MOVIES || "")
+      .split(",")
+      .map((id) => id.trim().toLowerCase())
+      .filter((id) => /^tt\d+$/.test(id))
+  )
+).slice(0, MAX_HOMEPAGE_MOVIES);
+
+let homepageMoviesCache = {
+  expiresAt: 0,
+  payload: null,
+};
 
 const adsenseScript = `
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6812141646808986"
        crossorigin="anonymous"></script>`;
 
+const homepageScript = `
+  <script defer src="/homepage.js"></script>`;
+
 app.disable("x-powered-by");
 
-// Serve the homepage with the Google AdSense loader inserted into <head>.
+async function getHomepageMovies() {
+  const now = Date.now();
+
+  if (homepageMoviesCache.payload && homepageMoviesCache.expiresAt > now) {
+    return homepageMoviesCache.payload;
+  }
+
+  // Resolve manually pinned IMDb IDs first. Each one uses the addon's existing
+  // meta handler, so TMDB_API_KEY remains server-side and is never exposed.
+  const pinnedResults = await Promise.all(
+    pinnedMovieIds.map(async (id) => {
+      try {
+        const response = await addonInterface.get("meta", "movie", id, {}, null);
+        const meta = response?.meta;
+        return meta?.id && meta?.poster ? meta : null;
+      } catch (error) {
+        console.warn(`Unable to resolve pinned homepage movie ${id}:`, error.message);
+        return null;
+      }
+    })
+  );
+
+  const resolvedPinned = pinnedResults.filter(Boolean);
+
+  // Fill any remaining positions with the current latest Filipino movie catalog.
+  let latestMovies = [];
+  try {
+    const response = await addonInterface.get(
+      "catalog",
+      "movie",
+      "filipino_movies",
+      {},
+      null
+    );
+    latestMovies = Array.isArray(response?.metas) ? response.metas : [];
+  } catch (error) {
+    console.warn("Unable to load latest homepage movies:", error.message);
+  }
+
+  const selected = [];
+  const seenIds = new Set();
+
+  const addMovie = (movie) => {
+    if (!movie?.id || !movie?.poster || seenIds.has(movie.id)) return;
+    if (selected.length >= MAX_HOMEPAGE_MOVIES) return;
+
+    seenIds.add(movie.id);
+    selected.push({
+      id: movie.id,
+      name: movie.name,
+      poster: movie.poster,
+      background: movie.background,
+      releaseInfo: movie.releaseInfo,
+      description: movie.description,
+    });
+  };
+
+  resolvedPinned.forEach(addMovie);
+  latestMovies.forEach(addMovie);
+
+  const payload = {
+    movies: selected,
+    pinnedConfigured: pinnedMovieIds.length,
+    pinnedCount: resolvedPinned.length,
+    generatedAt: new Date().toISOString(),
+  };
+
+  homepageMoviesCache = {
+    payload,
+    expiresAt: now + HOMEPAGE_CACHE_MS,
+  };
+
+  return payload;
+}
+
+// JSON endpoint used only by the landing page. Hybrid selection order:
+// 1) HOMEPAGE_MOVIES IMDb IDs, in the configured order
+// 2) latest catalog movies until six slots are filled
+app.get("/homepage-movies.json", async (req, res) => {
+  try {
+    const payload = await getHomepageMovies();
+    res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=900");
+    res.json(payload);
+  } catch (error) {
+    console.error("Failed to build homepage movie list:", error);
+    res.status(500).json({ error: "Unable to load homepage movies" });
+  }
+});
+
+// Serve the homepage with Google AdSense and the dynamic poster loader inserted
+// into <head>, while keeping the checked-in HTML easy to edit independently.
 app.get("/", (req, res, next) => {
   fs.readFile(indexFile, "utf8", (error, html) => {
     if (error) return next(error);
 
-    const page = html.includes("ca-pub-6812141646808986")
-      ? html
-      : html.replace("</head>", `${adsenseScript}\n</head>`);
+    let page = html;
+
+    if (!page.includes("ca-pub-6812141646808986")) {
+      page = page.replace("</head>", `${adsenseScript}\n</head>`);
+    }
+
+    if (!page.includes('src="/homepage.js"')) {
+      page = page.replace("</head>", `${homepageScript}\n</head>`);
+    }
 
     res.type("html").send(page);
   });
@@ -48,6 +163,11 @@ app.use((req, res) => {
 const server = app.listen(port, "0.0.0.0", () => {
   console.log(`Peenoise listening on port ${port}`);
   console.log(`Manifest: http://127.0.0.1:${port}/manifest.json`);
+  console.log(
+    pinnedMovieIds.length
+      ? `Homepage pinned movies: ${pinnedMovieIds.join(", ")}`
+      : "Homepage pinned movies: none (showing latest movies)"
+  );
 });
 
 server.on("error", (error) => {
