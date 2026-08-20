@@ -29,13 +29,13 @@ const manifest = {
   id: process.env.ADDON_ID || "org.filipinomoviesaddon.personal",
   version: "1.2.0",
   name: process.env.ADDON_NAME || "Pinoy Movies",
-  description: "Philippine R-18 movies from TMDB.",
+  description: "Philippines R-18 movies from TMDB.",
   types: ["movie"],
   catalogs: [
     {
       type: "movie",
       id: "filipino_movies",
-      name: "Philippine R-18 Movies",
+      name: "Philippines R-18 Movies",
       extra: [{ name: "skip", isRequired: false }],
     },
   ],
