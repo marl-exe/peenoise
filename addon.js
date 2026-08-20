@@ -155,8 +155,15 @@ const toCatalogMeta = async (movie) => ({
 
 export async function isAdultMovie(stremioId) {
   const tmdbId = await resolveTmdbMovieId(stremioId);
-  const { data } = await tmdbClient.get(`/movie/${tmdbId}`);
-  return data?.adult === true;
+  const { data } = await tmdbClient.get(`/movie/${tmdbId}/release_dates`);
+
+  const philippines = (data.results || []).find(
+    (entry) => entry.iso_3166_1 === "PH"
+  );
+
+  return (philippines?.release_dates || []).some(
+    (release) => String(release.certification || "").toUpperCase() === "R-18"
+  );
 }
 
 export async function getAdultHomepageMovies(limit = 6) {
@@ -172,16 +179,18 @@ export async function getAdultHomepageMovies(limit = 6) {
       params: {
         page,
         sort_by: "primary_release_date.desc",
-        with_original_language: CONFIG.DEFAULT_LANGUAGE,
         include_adult: true,
         include_video: false,
+        region: "PH",
+        certification_country: "PH",
+        certification: "R-18",
+        with_origin_country: "PH",
         "primary_release_date.lte": new Date().toISOString().slice(0, 10),
       },
     });
 
     const adultMovies = (data.results || []).filter(
-      (movie) =>
-        movie?.adult === true && movie?.id && movie?.title && movie?.poster_path
+      (movie) => movie?.id && movie?.title && movie?.poster_path
     );
 
     for (const movie of adultMovies) {
