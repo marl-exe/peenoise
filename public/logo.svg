@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Peenoise</title>
+  <desc id="desc">Peenoise play mark</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="60" x2="440" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#635BFF"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="160" y1="110" x2="340" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9E5FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="132" fill="#0B0D12"/>
+  <rect x="28" y="28" width="456" height="456" rx="112" fill="url(#bg)" opacity=".20"/>
+  <path d="M184 139c0-15 16-24 29-16l170 108c12 8 12 26 0 34L213 389c-13 8-29-1-29-16V139Z" fill="url(#shine)"/>
+  <circle cx="256" cy="256" r="219" fill="none" stroke="#FFFFFF" stroke-opacity=".10" stroke-width="2"/>
+</svg>
