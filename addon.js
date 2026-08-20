@@ -142,6 +142,63 @@ async function resolveTmdbMovieId(stremioId) {
   return resolvedId;
 }
 
+const toCatalogMeta = async (movie) => ({
+  id: await getStremioIdForTmdbMovie(movie.id),
+  type: "movie",
+  name: movie.title,
+  poster: getImageUrl(movie.poster_path, "w500"),
+  posterShape: "poster",
+  background: getImageUrl(movie.backdrop_path, "w1280"),
+  releaseInfo: toReleaseInfo(movie.release_date),
+  description: movie.overview || undefined,
+});
+
+export async function isAdultMovie(stremioId) {
+  const tmdbId = await resolveTmdbMovieId(stremioId);
+  const { data } = await tmdbClient.get(`/movie/${tmdbId}`);
+  return data?.adult === true;
+}
+
+export async function getAdultHomepageMovies(limit = 6) {
+  const maxItems = Math.max(0, Number.parseInt(String(limit), 10) || 0);
+  if (maxItems === 0) return [];
+
+  const selected = [];
+  const seenIds = new Set();
+  const maxPages = 10;
+
+  for (let page = 1; page <= maxPages && selected.length < maxItems; page += 1) {
+    const { data } = await tmdbClient.get("/discover/movie", {
+      params: {
+        page,
+        sort_by: "primary_release_date.desc",
+        with_original_language: CONFIG.DEFAULT_LANGUAGE,
+        include_adult: true,
+        include_video: false,
+        "primary_release_date.lte": new Date().toISOString().slice(0, 10),
+      },
+    });
+
+    const adultMovies = (data.results || []).filter(
+      (movie) =>
+        movie?.adult === true && movie?.id && movie?.title && movie?.poster_path
+    );
+
+    for (const movie of adultMovies) {
+      const meta = await toCatalogMeta(movie);
+      if (!meta?.id || seenIds.has(meta.id)) continue;
+
+      seenIds.add(meta.id);
+      selected.push(meta);
+      if (selected.length >= maxItems) break;
+    }
+
+    if (page >= (data.total_pages || 0)) break;
+  }
+
+  return selected;
+}
+
 builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
   if (type !== "movie" || id !== "filipino_movies") {
     return { metas: [] };
@@ -162,26 +219,13 @@ builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
       },
     });
 
-    // Keep only titles TMDB explicitly flags as adult content. include_adult=true
-    // merely allows those titles into discover results; this filter makes the
-    // Peenoise catalog adult-only.
+    // The Stremio catalog includes both regular and adult titles. Adult-only
+    // filtering is intentionally limited to the website homepage poster feed.
     const movies = (data.results || []).filter(
-      (movie) =>
-        movie?.adult === true && movie?.id && movie?.title && movie?.poster_path
+      (movie) => movie?.id && movie?.title && movie?.poster_path
     );
 
-    const metas = await Promise.all(
-      movies.map(async (movie) => ({
-        id: await getStremioIdForTmdbMovie(movie.id),
-        type: "movie",
-        name: movie.title,
-        poster: getImageUrl(movie.poster_path, "w500"),
-        posterShape: "poster",
-        background: getImageUrl(movie.backdrop_path, "w1280"),
-        releaseInfo: toReleaseInfo(movie.release_date),
-        description: movie.overview || undefined,
-      }))
-    );
+    const metas = await Promise.all(movies.map(toCatalogMeta));
 
     return {
       metas,
