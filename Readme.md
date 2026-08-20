@@ -25,7 +25,6 @@ Open the website and use the **Install in Stremio** button, or add the manifest 
 - Server-side TMDB API access so the API key is never exposed to browser code
 - In-memory mapping and homepage caching
 - Render-compatible deployment using `process.env.PORT`
-- Google AdSense loader on the landing page
 
 ## Important: Streaming
 
@@ -141,3 +140,15 @@ Peenoise does not host, upload, or provide movie video files. Catalog and metada
 ## License
 
 See [LICENSE](LICENSE) for the repository license terms.
+
+## Upstream / Attribution
+
+Peenoise was originally based on the `johnchrisdc/stremio_addon` project.
+
+Original project:
+https://github.com/johnchrisdc/stremio_addon
+
+The original code is licensed under the BSD 3-Clause License.
+Copyright (c) 2024, Dindo Quitor.
+
+Peenoise includes subsequent modifications, modernization, UI changes, dependency updates, and additional functionality.
