@@ -1,6 +1,6 @@
-# Peenoise
+# Peenoise — Stremio Addon for Filipino & Pinoy Movies
 
-Peenoise is a personal Stremio catalog and metadata addon focused on Filipino movies. It discovers recent Filipino-language releases from TMDB, exposes them through Stremio-compatible catalog and metadata endpoints, and includes a custom web landing page for installation and discovery.
+Peenoise is a personal Stremio catalog and metadata addon for discovering Filipino and Pinoy movies from the Philippines. It focuses on recent Philippine cinema and Filipino-language releases from TMDB, exposes them through Stremio-compatible catalog and metadata endpoints, and includes a custom web landing page for installation and discovery.
 
 > Peenoise is an independent community addon and is not affiliated with or endorsed by Stremio.
 
