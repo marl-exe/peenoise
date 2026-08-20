@@ -1,8 +1,8 @@
-# Peenoise — Stremio Addon for Filipino & Pinoy Movies
+# Peenoise — Philippine R-18 Movies for Stremio
 
-Peenoise is a personal Stremio catalog and metadata addon for discovering Filipino and Pinoy movies from the Philippines. It focuses on recent Philippine cinema and Filipino-language releases from TMDB, exposes them through Stremio-compatible catalog and metadata endpoints, and includes a custom web landing page for installation and discovery.
+Peenoise is an independent Stremio catalog and metadata addon focused on Philippine movies carrying a Philippine **R-18** certification in TMDB. It exposes those titles through Stremio-compatible catalog and metadata endpoints and includes a lightweight web landing page for installation and discovery.
 
-> Peenoise is an independent community addon and is not affiliated with or endorsed by Stremio.
+> **18+ only.** The catalog is intended for adults. Peenoise is an independent community addon and is not affiliated with or endorsed by Stremio.
 
 ## Live Addon
 
@@ -12,25 +12,40 @@ Peenoise is a personal Stremio catalog and metadata addon for discovering Filipi
 
 Open the website and use the **Install in Stremio** button, or add the manifest URL manually in Stremio.
 
+## Catalog Rules
+
+The Stremio catalog is built from TMDB movie discovery using these rules:
+
+- Region: `PH`
+- Certification country: `PH`
+- Certification: `R-18`
+- Origin country: `PH`
+- Release date: today or earlier
+- Poster: required
+- Adult entries: included
+- Video-only entries: excluded
+- Sort order: newest release date first
+
+The addon loads all matching TMDB result pages, de-duplicates titles, caches the result set, and serves Stremio in pages as the user scrolls.
+
 ## Features
 
-- Latest Filipino movie catalog sourced from TMDB
+- Philippine R-18 movie catalog sourced from TMDB
 - Stremio `catalog`, `meta`, and `stream` resources
 - IMDb IDs when available, with `tmdb:<id>` fallback
 - TMDB-to-IMDb and IMDb-to-TMDB ID resolution
-- Movie posters, backdrops, descriptions, genres, cast, directors, runtime, release information, language, and country metadata
-- Custom Express landing page with live addon status
-- Dynamic homepage movie posters
-- Hybrid homepage mode: manually pinned IMDb titles first, then automatic latest releases
+- Posters, backdrops, descriptions, genres, cast, directors, runtime, release information, language, and country metadata
+- Dynamic R-18 homepage poster preview
+- Optional manually pinned homepage titles, validated against Philippine R-18 certification
 - Server-side TMDB API access so the API key is never exposed to browser code
-- In-memory mapping and homepage caching
+- In-memory ID mapping plus catalog and homepage caching
 - Render-compatible deployment using `process.env.PORT`
 
 ## Important: Streaming
 
 Peenoise currently provides **catalog and metadata discovery only**. Its stream handler intentionally returns an empty stream list.
 
-Movies use IMDb IDs whenever TMDB provides one, which allows other installed Stremio stream addons to match the same title and provide streams independently.
+Movies use IMDb IDs whenever TMDB provides one, which allows other installed Stremio stream addons to recognize the same title and provide streams independently.
 
 ## Tech Stack
 
@@ -84,15 +99,15 @@ http://localhost:7000/catalog/movie/filipino_movies.json
 | `ADDON_ID` | No | Overrides the default Stremio addon ID |
 | `ADDON_NAME` | No | Overrides the default addon display name |
 | `ADDON_LOGO` | No | Overrides the addon logo URL |
-| `HOMEPAGE_MOVIES` | No | Comma-separated IMDb IDs to pin on the landing page |
+| `HOMEPAGE_MOVIES` | No | Comma-separated IMDb IDs to pin on the landing page; only Philippine R-18 titles are accepted |
 
-Example hybrid homepage configuration:
+Example:
 
 ```env
 HOMEPAGE_MOVIES=tt1234567,tt2345678,tt3456789
 ```
 
-Pinned titles are displayed first in the configured order. Any remaining homepage slots are filled automatically from the latest Filipino movie catalog, up to six movies total.
+Valid pinned R-18 titles are displayed first in the configured order. Any remaining homepage slots are filled from the newest titles in the same Philippine R-18 catalog, up to six movies total.
 
 ## Main Endpoints
 
@@ -100,10 +115,10 @@ Pinned titles are displayed first in the configured order. Any remaining homepag
 | --- | --- |
 | `/` | Peenoise landing and installation page |
 | `/manifest.json` | Stremio addon manifest |
-| `/catalog/movie/filipino_movies.json` | Filipino movie catalog |
+| `/catalog/movie/filipino_movies.json` | Philippine R-18 movie catalog |
 | `/meta/movie/:id.json` | Movie metadata |
 | `/stream/movie/:id.json` | Valid Stremio stream endpoint; currently returns no streams |
-| `/homepage-movies.json` | Landing-page movie selection API |
+| `/homepage-movies.json` | Landing-page R-18 movie selection API |
 
 ## Production Deployment
 
@@ -119,13 +134,14 @@ Configure `TMDB_API_KEY` in the Render environment. Do not commit `.env` files o
 
 ## Security
 
-Dependency auditing can be checked with:
+Run dependency and syntax checks with:
 
 ```bash
 npm audit --omit=dev
+npm test
 ```
 
-The project has been migrated from the legacy `stremio-addon-sdk` package to `@stremio-addon/compat` and uses ES modules.
+The project uses `@stremio-addon/compat` and ES modules.
 
 ## TMDB Attribution
 
@@ -135,7 +151,7 @@ TMDB data and artwork remain subject to TMDB's terms and attribution requirement
 
 ## Disclaimer
 
-Peenoise does not host, upload, or provide movie video files. Catalog and metadata information is retrieved from TMDB. Availability of playback depends on other Stremio addons or services installed by the user.
+Peenoise does not host, upload, or provide movie video files. Catalog and metadata information is retrieved from TMDB. Ratings and certifications depend on the data available in TMDB. Playback availability depends on other Stremio addons or services installed by the user.
 
 ## License
 
