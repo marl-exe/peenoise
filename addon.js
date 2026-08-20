@@ -28,7 +28,7 @@ const tmdbClient = axios.create({
 
 const manifest = {
   id: process.env.ADDON_ID || "org.filipinomoviesaddon.personal",
-  version: "1.2.1",
+  version: "1.2.2",
   name: process.env.ADDON_NAME || "Pinoy Movies",
   description: "Philippines R-18 movies from TMDB.",
   types: ["movie"],
@@ -43,7 +43,7 @@ const manifest = {
   resources: [
     "catalog",
     { name: "meta", types: ["movie"], idPrefixes: ["tt", "tmdb:"] },
-    { name: "stream", types: ["movie"], idPrefixes: ["tt"] },
+    { name: "stream", types: ["movie"], idPrefixes: ["tt", "tmdb:"] },
   ],
   logo: process.env.ADDON_LOGO || "https://peenoise.onrender.com/logo.svg",
 };
@@ -68,6 +68,8 @@ const parseTmdbId = (id) => {
   const match = /^tmdb:(\d+)$/.exec(id);
   return match ? match[1] : null;
 };
+
+const isSupportedStreamId = (id) => isImdbId(id) || Boolean(parseTmdbId(id));
 
 const normalizeCertification = (certification) =>
   String(certification || "")
@@ -358,13 +360,13 @@ builder.defineMetaHandler(async ({ type, id }) => {
 });
 
 builder.defineStreamHandler(async ({ type, id }) => {
-  if (type !== "movie" || !isImdbId(id)) {
+  if (type !== "movie" || !isSupportedStreamId(id)) {
     return { streams: [] };
   }
 
-  // This addon supplies catalog/metadata only. Returning an empty stream list
-  // keeps the stream resource valid; other installed stream addons can match
-  // this same IMDb ID and provide their own streams.
+  // This addon supplies catalog/metadata only. Accepting both IMDb and TMDB IDs
+  // keeps the stream resource valid for every movie in this catalog. Other
+  // installed stream addons may still require IMDb IDs to provide playback.
   return { streams: [] };
 });
 
