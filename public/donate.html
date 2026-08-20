@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="description" content="Support Peenoise and help cover hosting and maintenance." />
+  <meta name="google-adsense-account" content="ca-pub-6812141646808986">
+  <title>Donate — Peenoise</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07080b;
+      --panel: rgba(255, 255, 255, 0.055);
+      --text: #f7f8fb;
+      --muted: #a7adbb;
+      --line: rgba(255, 255, 255, 0.11);
+      --accent: #dc2626;
+      --accent-2: #991b1b;
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 82% 8%, rgba(220, 38, 38, 0.18), transparent 34rem),
+        radial-gradient(circle at 6% 70%, rgba(127, 29, 29, 0.12), transparent 28rem),
+        linear-gradient(180deg, #0a0b0f 0%, var(--bg) 58%, #050608 100%);
+    }
+
+    a { color: inherit; }
+    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 82px; }
+    .brand { justify-self: start; display: inline-flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: -.03em; text-decoration: none; font-size: 1.08rem; }
+    .mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: linear-gradient(145deg, rgba(220,38,38,.28), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.2); }
+    .mark svg { width: 21px; height: 21px; }
+    .nav-donate { justify-self: center; padding: 9px 15px; border: 1px solid rgba(248,113,113,.28); border-radius: 999px; color: #fecaca; background: rgba(220,38,38,.10); text-decoration: none; font-size: .9rem; font-weight: 750; }
+    .nav-actions { justify-self: end; display: flex; gap: 10px; align-items: center; }
+    .link-btn { padding: 10px 13px; color: var(--muted); text-decoration: none; border-radius: 10px; }
+    .link-btn:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+    main { min-height: calc(100vh - 176px); display: grid; place-items: center; padding: 76px 0 110px; }
+    .donate-card { width: min(100%, 720px); padding: clamp(30px, 6vw, 58px); border: 1px solid var(--line); border-radius: 28px; background: rgba(18,20,29,.78); box-shadow: var(--shadow); backdrop-filter: blur(18px); text-align: center; }
+    .heart { width: 62px; height: 62px; margin: 0 auto 22px; display: grid; place-items: center; border-radius: 18px; border: 1px solid rgba(248,113,113,.24); background: rgba(220,38,38,.13); font-size: 1.65rem; }
+    h1 { margin: 0; font-size: clamp(2.5rem, 7vw, 4.7rem); line-height: .98; letter-spacing: -.055em; }
+    .lead { max-width: 610px; margin: 22px auto 0; color: var(--muted); font-size: 1.08rem; line-height: 1.75; }
+    .support-box { margin-top: 32px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+    .support-box strong { display: block; margin-bottom: 7px; }
+    .support-box span { color: var(--muted); line-height: 1.6; font-size: .94rem; }
+    .actions { margin-top: 28px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 0 18px; border-radius: 13px; text-decoration: none; font-weight: 760; }
+    .btn-primary { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    .btn-secondary { border: 1px solid var(--line); background: rgba(255,255,255,.045); color: #e9eaf0; }
+    .note { margin-top: 22px; color: #7f8694; font-size: .82rem; line-height: 1.6; }
+
+    footer { padding: 26px 0 42px; border-top: 1px solid var(--line); color: #777e8c; font-size: .82rem; }
+    .footer-row { display: flex; justify-content: space-between; gap: 24px; }
+
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 28px, 1120px); }
+      nav { grid-template-columns: 1fr auto; min-height: 70px; }
+      .nav-donate { display: none; }
+      .nav-actions .link-btn:first-child { display: none; }
+      main { padding-top: 48px; }
+      .donate-card { border-radius: 22px; }
+      .footer-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav>
+      <a class="brand" href="/" aria-label="Peenoise home">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 4.8v14.4L19 12 7 4.8Z" fill="currentColor" /></svg>
+        </span>
+        Peenoise
+      </a>
+      <a class="nav-donate" href="/donate" aria-current="page">Donate</a>
+      <div class="nav-actions">
+        <a class="link-btn" href="/manifest.json" target="_blank" rel="noreferrer">Manifest</a>
+        <a class="link-btn" href="/">Home</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="donate-card">
+        <div class="heart" aria-hidden="true">♥</div>
+        <h1>Support Peenoise.</h1>
+        <p class="lead">Peenoise is free to use and independently maintained. Optional donations can help cover hosting, maintenance, and the time spent improving the addon.</p>
+
+        <div class="support-box">
+          <strong>Donation method coming soon</strong>
+          <span>This page is ready for your preferred payment option. A PayPal, Ko-fi, Buy Me a Coffee, GCash, or other support link can be added here without changing the rest of the site.</span>
+        </div>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/">Back to Peenoise</a>
+          <a class="btn btn-secondary" href="/manifest.json" target="_blank" rel="noreferrer">View manifest</a>
+        </div>
+
+        <p class="note">Donations are entirely optional and do not unlock additional catalog or addon features.</p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-row">
+        <span>Independent community addon · No media hosted</span>
+        <span>© <span id="year"></span> Peenoise</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
