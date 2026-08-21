@@ -27,7 +27,7 @@ const tmdbClient = axios.create({
 
 const manifest = {
   id: process.env.ADDON_ID || "org.filipinomoviesaddon.personal",
-  version: "1.2.2",
+  version: "1.2.3",
   name: process.env.ADDON_NAME || "Pinoy Movies",
   description: "Philippines R-18 movies from TMDB.",
   types: ["movie"],
@@ -44,7 +44,9 @@ const manifest = {
     { name: "meta", types: ["movie"], idPrefixes: ["tt", "tmdb:"] },
     { name: "stream", types: ["movie"], idPrefixes: ["tt", "tmdb:"] },
   ],
-  logo: process.env.ADDON_LOGO || "https://peenoise.onrender.com/logo.svg",
+  logo:
+    process.env.ADDON_LOGO ||
+    "https://peenoise.fkye.workers.dev/logo.svg",
 };
 
 const builder = new addonBuilder(manifest);
