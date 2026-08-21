@@ -1,13 +1,24 @@
+import * as process from "node:process";
+
 let workerModulePromise;
 
 export default {
   async fetch(request, env, ctx) {
-    // Cloudflare validates a new Worker version before runtime bindings such as
-    // secrets are attached. Delay loading the application until the first real
-    // request, when TMDB_API_KEY is available in the Worker environment.
-    if (!process.env.TMDB_API_KEY && typeof env.TMDB_API_KEY === "string") {
-      process.env.TMDB_API_KEY = env.TMDB_API_KEY;
+    // Use the runtime binding directly. Importing node:process here ensures the
+    // same Node compatibility process module is populated before addon.js is
+    // dynamically evaluated.
+    if (typeof env.TMDB_API_KEY !== "string" || !env.TMDB_API_KEY) {
+      console.error("TMDB_API_KEY Worker secret binding is missing");
+      return new Response(
+        JSON.stringify({ error: "TMDB_API_KEY Worker secret binding is missing" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+        }
+      );
     }
+
+    process.env.TMDB_API_KEY = env.TMDB_API_KEY;
 
     workerModulePromise ??= import("./worker.js");
     const { default: worker } = await workerModulePromise;
