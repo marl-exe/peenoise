@@ -133,7 +133,7 @@
           <p class="lead">Peenoise is a catalog and metadata addon for movies from the Philippines carrying an R-18 certification in TMDB.</p>
           <div class="cta-row">
             <button class="btn btn-primary" id="installBtn" type="button"><span>Install in Stremio</span><span aria-hidden="true">→</span></button>
-            <a class="btn btn-secondary" href="/manifest.json" target="_blank" rel="noreferrer">View manifest</a>
+            <a class="btn btn-secondary" href="https://peenoise.fkye.workers.dev/manifest.json" target="_blank" rel="noreferrer">View manifest</a>
           </div>
           <div class="micro">For adults 18+ only. No signup. No media hosted here. Metadata and certification data are sourced from TMDB.</div>
         </div>
@@ -199,7 +199,8 @@
   </div>
 
   <script>
-    const stremioUrl = `stremio://${window.location.host}/manifest.json`;
+    const manifestUrl = 'https://peenoise.fkye.workers.dev/manifest.json';
+    const stremioUrl = 'stremio://peenoise.fkye.workers.dev/manifest.json';
 
     const install = () => {
       window.location.href = stremioUrl;
@@ -209,7 +210,7 @@
     document.getElementById('installBtn2').addEventListener('click', install);
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    fetch('/manifest.json', { cache: 'no-store' })
+    fetch(manifestUrl, { cache: 'no-store' })
       .then((response) => {
         if (!response.ok) throw new Error('Manifest unavailable');
         return response.json();
