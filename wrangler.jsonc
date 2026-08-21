@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "peenoise",
-  "main": "worker.js",
+  "main": "cloudflare-entry.js",
   "compatibility_date": "2026-08-21",
   "assets": {
     "directory": "./public/",
