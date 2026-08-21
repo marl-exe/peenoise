@@ -52,11 +52,8 @@ const builder = new addonBuilder(manifest);
 const tmdbToStremioIdCache = new Map();
 const imdbToTmdbIdCache = new Map();
 const phR18CertificationCache = new Map();
-
-let r18CatalogCache = {
-  expiresAt: 0,
-  movies: null,
-};
+const verificationPromiseCache = new Map();
+const r18CatalogPageCache = new Map();
 
 const getImageUrl = (path, size = "w500") =>
   path ? `${CONFIG.IMAGE_BASE_URL}/${size}${path}` : undefined;
@@ -111,6 +108,18 @@ const getR18DiscoverParams = () => ({
   "primary_release_date.lte": new Date().toISOString().slice(0, 10),
 });
 
+function rememberStremioId(tmdbId, imdbId) {
+  const key = String(tmdbId);
+  const stremioId = isImdbId(imdbId) ? imdbId : `tmdb:${key}`;
+
+  tmdbToStremioIdCache.set(key, stremioId);
+  if (isImdbId(stremioId)) {
+    imdbToTmdbIdCache.set(stremioId, key);
+  }
+
+  return stremioId;
+}
+
 async function getStremioIdForTmdbMovie(tmdbId) {
   const key = String(tmdbId);
 
@@ -120,23 +129,10 @@ async function getStremioIdForTmdbMovie(tmdbId) {
 
   try {
     const { data } = await tmdbClient.get(`/movie/${key}/external_ids`);
-    const stremioId =
-      data.imdb_id && isImdbId(data.imdb_id)
-        ? data.imdb_id
-        : `tmdb:${key}`;
-
-    tmdbToStremioIdCache.set(key, stremioId);
-
-    if (isImdbId(stremioId)) {
-      imdbToTmdbIdCache.set(stremioId, key);
-    }
-
-    return stremioId;
+    return rememberStremioId(key, data.imdb_id);
   } catch (error) {
     logApiError(error, `external_ids:${key}`);
-    const fallbackId = `tmdb:${key}`;
-    tmdbToStremioIdCache.set(key, fallbackId);
-    return fallbackId;
+    return rememberStremioId(key, null);
   }
 }
 
@@ -179,6 +175,54 @@ const toCatalogMeta = async (movie) => ({
   description: movie.overview || undefined,
 });
 
+async function verifyAndPrimeMovie(tmdbId) {
+  const key = String(tmdbId);
+
+  if (
+    phR18CertificationCache.has(key) &&
+    tmdbToStremioIdCache.has(key)
+  ) {
+    return phR18CertificationCache.get(key);
+  }
+
+  if (verificationPromiseCache.has(key)) {
+    return verificationPromiseCache.get(key);
+  }
+
+  const verification = (async () => {
+    try {
+      // One TMDB request verifies the PH R-18 certificate and primes the IMDb
+      // mapping. Combining these calls keeps Cloudflare Free catalog requests
+      // safely below its external-subrequest limit.
+      const { data } = await tmdbClient.get(`/movie/${key}`, {
+        params: {
+          append_to_response: "release_dates,external_ids",
+        },
+      });
+
+      const philippines = (data.release_dates?.results || []).find(
+        (entry) => entry.iso_3166_1 === "PH"
+      );
+
+      const isR18 = (philippines?.release_dates || []).some(
+        (release) => normalizeCertification(release.certification) === "R-18"
+      );
+
+      phR18CertificationCache.set(key, isR18);
+      rememberStremioId(key, data.external_ids?.imdb_id);
+      return isR18;
+    } catch (error) {
+      logApiError(error, `verification:${key}`);
+      // Strict mode: if the certification cannot be verified, exclude the movie.
+      phR18CertificationCache.set(key, false);
+      return false;
+    }
+  })();
+
+  verificationPromiseCache.set(key, verification);
+  return verification;
+}
+
 async function hasPhilippinesR18Certification(tmdbId) {
   const key = String(tmdbId);
 
@@ -186,85 +230,66 @@ async function hasPhilippinesR18Certification(tmdbId) {
     return phR18CertificationCache.get(key);
   }
 
-  try {
-    const { data } = await tmdbClient.get(`/movie/${key}/release_dates`);
-    const philippines = (data.results || []).find(
-      (entry) => entry.iso_3166_1 === "PH"
-    );
-
-    const isR18 = (philippines?.release_dates || []).some(
-      (release) => normalizeCertification(release.certification) === "R-18"
-    );
-
-    phR18CertificationCache.set(key, isR18);
-    return isR18;
-  } catch (error) {
-    logApiError(error, `release_dates:${key}`);
-    // Strict mode: if the certification cannot be verified, exclude the movie.
-    return false;
-  }
+  return verifyAndPrimeMovie(key);
 }
 
-async function loadR18CatalogMovies() {
+async function loadR18CatalogPage(pageNumber) {
+  const page = Math.max(1, Math.min(500, Number.parseInt(String(pageNumber), 10) || 1));
   const now = Date.now();
+  const cached = r18CatalogPageCache.get(page);
 
-  if (r18CatalogCache.movies && r18CatalogCache.expiresAt > now) {
-    return r18CatalogCache.movies;
+  if (cached && cached.expiresAt > now) {
+    return cached;
   }
 
-  const movies = [];
+  const { data } = await tmdbClient.get("/discover/movie", {
+    params: {
+      ...getR18DiscoverParams(),
+      page,
+    },
+  });
+
+  const totalPages = Math.min(Number(data.total_pages) || 1, 500);
   const checkedIds = new Set();
-  let page = 1;
-  let totalPages = 1;
+  const candidates = (data.results || []).filter((movie) => {
+    if (!movie?.id || !movie?.title || !movie?.poster_path) return false;
+    if (checkedIds.has(movie.id)) return false;
+    checkedIds.add(movie.id);
+    return true;
+  });
 
-  do {
-    const { data } = await tmdbClient.get("/discover/movie", {
-      params: {
-        ...getR18DiscoverParams(),
-        page,
-      },
-    });
+  const movies = [];
 
-    totalPages = Math.min(Number(data.total_pages) || 1, 500);
+  for (
+    let index = 0;
+    index < candidates.length;
+    index += CONFIG.CERTIFICATION_CHECK_CONCURRENCY
+  ) {
+    const batch = candidates.slice(
+      index,
+      index + CONFIG.CERTIFICATION_CHECK_CONCURRENCY
+    );
 
-    const candidates = (data.results || []).filter((movie) => {
-      if (!movie?.id || !movie?.title || !movie?.poster_path) return false;
-      if (checkedIds.has(movie.id)) return false;
-      checkedIds.add(movie.id);
-      return true;
-    });
+    const verified = await Promise.all(
+      batch.map(async (movie) => ({
+        movie,
+        isR18: await verifyAndPrimeMovie(movie.id),
+      }))
+    );
 
-    for (
-      let index = 0;
-      index < candidates.length;
-      index += CONFIG.CERTIFICATION_CHECK_CONCURRENCY
-    ) {
-      const batch = candidates.slice(
-        index,
-        index + CONFIG.CERTIFICATION_CHECK_CONCURRENCY
-      );
-
-      const verified = await Promise.all(
-        batch.map(async (movie) => ({
-          movie,
-          isR18: await hasPhilippinesR18Certification(movie.id),
-        }))
-      );
-
-      for (const result of verified) {
-        if (result.isR18) movies.push(result.movie);
-      }
+    for (const result of verified) {
+      if (result.isR18) movies.push(result.movie);
     }
+  }
 
-    page += 1;
-  } while (page <= totalPages);
-
-  r18CatalogCache = {
+  const payload = {
     movies,
+    totalPages,
     expiresAt: now + CONFIG.R18_CACHE_MS,
   };
 
-  return movies;
+  r18CatalogPageCache.set(page, payload);
+  return payload;
 }
 
 export async function isAdultMovie(stremioId) {
@@ -276,7 +301,7 @@ export async function getAdultHomepageMovies(limit = 6) {
   const maxItems = Math.max(0, Number.parseInt(String(limit), 10) || 0);
   if (maxItems === 0) return [];
 
-  const movies = await loadR18CatalogMovies();
+  const { movies } = await loadR18CatalogPage(1);
   const selected = movies.slice(0, maxItems);
   return Promise.all(selected.map(toCatalogMeta));
 }
@@ -288,8 +313,26 @@ builder.defineCatalogHandler(async ({ type, id, extra = {} }) => {
 
   try {
     const skip = Math.max(0, Number.parseInt(extra.skip || "0", 10) || 0);
-    const movies = await loadR18CatalogMovies();
-    const pageMovies = movies.slice(skip, skip + CONFIG.ITEMS_PER_PAGE);
+    const discoverPage = Math.floor(skip / CONFIG.ITEMS_PER_PAGE) + 1;
+    const offset = skip % CONFIG.ITEMS_PER_PAGE;
+
+    const firstPage = await loadR18CatalogPage(discoverPage);
+    const pageMovies = firstPage.movies.slice(offset, offset + CONFIG.ITEMS_PER_PAGE);
+
+    // Strict verification can occasionally remove a Discover result. Fill any
+    // gap from the next TMDB page while still using no more than two Discover
+    // pages per request. With 20 candidates per page this stays below the
+    // Cloudflare Workers Free limit of 50 external subrequests.
+    if (
+      pageMovies.length < CONFIG.ITEMS_PER_PAGE &&
+      discoverPage < firstPage.totalPages
+    ) {
+      const nextPage = await loadR18CatalogPage(discoverPage + 1);
+      pageMovies.push(
+        ...nextPage.movies.slice(0, CONFIG.ITEMS_PER_PAGE - pageMovies.length)
+      );
+    }
+
     const metas = await Promise.all(pageMovies.map(toCatalogMeta));
 
     return {
