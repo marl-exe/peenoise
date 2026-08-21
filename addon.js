@@ -47,6 +47,11 @@ const manifest = {
   logo:
     process.env.ADDON_LOGO ||
     "https://peenoise.fkye.workers.dev/logo.svg",
+  stremioAddonsConfig: {
+    issuer: "https://stremio-addons.net",
+    signature:
+      "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..eNZqPf9GjmBF3wR-D2Foow.25EaHe6i3KoKZQwNpHxH-bLw8yTXrTyr-cj-1DO07WvaaWTb83-jMFyzsnAIPQ88ufuWhL87wnsxAeR0lMi_dFdBRFfL72riJm_rr5_iXTNCgBCAenb3hg8nqMFWD_v7.bRsGq6KogUiAS5hjFdINZQ",
+  },
 };
 
 const builder = new addonBuilder(manifest);
