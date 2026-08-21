@@ -6,9 +6,9 @@ Peenoise is an independent Stremio catalog and metadata addon focused on movies 
 
 ## Live Addon
 
-- Website: https://peenoise.onrender.com/
-- Manifest: https://peenoise.onrender.com/manifest.json
-- Stremio install URL: `stremio://peenoise.onrender.com/manifest.json`
+- Website: https://peenoise.fkye.workers.dev/
+- Manifest: https://peenoise.fkye.workers.dev/manifest.json
+- Stremio install URL: `stremio://peenoise.fkye.workers.dev/manifest.json`
 
 Open the website and use the **Install in Stremio** button, or add the manifest URL manually in Stremio.
 
@@ -26,11 +26,12 @@ The Stremio catalog is built from TMDB movie discovery using these rules:
 - Video-only entries: excluded
 - Sort order: newest release date first
 
-The addon loads all matching TMDB result pages, de-duplicates titles, caches the result set, and serves Stremio in pages as the user scrolls.
+Each TMDB Discover candidate is verified against its Philippine release data before it is admitted to the catalog. If the R-18 certification cannot be verified, the movie is excluded. Results are de-duplicated, cached, and served in Stremio-compatible pages as the user scrolls.
 
 ## Features
 
 - Philippines R-18 movie catalog sourced from TMDB
+- Strict per-movie Philippine R-18 certification verification
 - Stremio `catalog`, `meta`, and `stream` resources
 - IMDb IDs when available, with `tmdb:<id>` fallback
 - TMDB-to-IMDb and IMDb-to-TMDB ID resolution
@@ -39,7 +40,8 @@ The addon loads all matching TMDB result pages, de-duplicates titles, caches the
 - Optional manually pinned homepage titles, validated against Philippine R-18 certification
 - Server-side TMDB API access so the API key is never exposed to browser code
 - In-memory ID mapping plus catalog and homepage caching
-- Render-compatible deployment using `process.env.PORT`
+- Cloudflare Workers production deployment with GitHub-connected builds
+- Node/Express server retained for local use and alternate hosting
 
 ## Important: Streaming
 
@@ -49,14 +51,13 @@ Movies use IMDb IDs whenever TMDB provides one, which allows other installed Str
 
 ## Tech Stack
 
-- Node.js 18+
-- JavaScript / ES modules
-- Express
+- Node.js / JavaScript ES modules
+- Cloudflare Workers
 - `@stremio-addon/compat`
 - Axios
-- dotenv
+- Express for the standalone Node server
+- dotenv for local Node environments
 - TMDB API
-- Render
 
 ## Local Setup
 
@@ -75,7 +76,7 @@ TMDB_API_KEY=your_tmdb_api_key
 PORT=7000
 ```
 
-Then start the addon:
+Then start the standalone Node server:
 
 ```bash
 npm start
@@ -94,8 +95,8 @@ http://localhost:7000/catalog/movie/filipino_movies.json
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `TMDB_API_KEY` | Yes | TMDB API key used by the server |
-| `PORT` | No | HTTP port. Defaults to `7000`; Render supplies this automatically |
+| `TMDB_API_KEY` | Yes | TMDB API key used by the runtime; configured as a Cloudflare Worker secret in production |
+| `PORT` | No | Port for the standalone Node server. Defaults to `7000`; ignored by Cloudflare Workers |
 | `ADDON_ID` | No | Overrides the default Stremio addon ID |
 | `ADDON_NAME` | No | Overrides the default addon display name |
 | `ADDON_LOGO` | No | Overrides the addon logo URL |
@@ -122,15 +123,19 @@ Valid pinned R-18 titles are displayed first in the configured order. Any remain
 
 ## Production Deployment
 
-The project is currently deployed on Render. A typical Render Web Service configuration is:
+Production is deployed on Cloudflare Workers and connected to the repository's `main` branch.
+
+Cloudflare deploys with:
 
 ```text
-Runtime: Node
-Build Command: npm install
-Start Command: npm start
+npx wrangler deploy
 ```
 
-Configure `TMDB_API_KEY` in the Render environment. Do not commit `.env` files or API secrets to the repository.
+The Worker entry point is `cloudflare-entry.js`, with configuration in `wrangler.jsonc`. Static files from `public/` are served by Cloudflare Assets, while Stremio protocol requests are handled by the Worker runtime.
+
+Configure `TMDB_API_KEY` as a **Worker runtime secret** in Cloudflare. Do not commit `.env`, `.dev.vars`, or API secrets to the repository.
+
+The standalone `server.js` remains available for local development or deployment to a traditional Node host if needed.
 
 ## Security
 
