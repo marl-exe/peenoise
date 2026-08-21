@@ -3,6 +3,9 @@
   "name": "peenoise",
   "main": "cloudflare-entry.js",
   "compatibility_date": "2026-08-21",
+  "secrets": {
+    "required": ["TMDB_API_KEY"]
+  },
   "assets": {
     "directory": "./public/",
     "html_handling": "auto-trailing-slash"
