@@ -5,6 +5,10 @@ node_modules/
 .env
 .env.*
 !.env.example
+.dev.vars*
+
+# Cloudflare local state
+.wrangler/
 
 # OS files
 .DS_Store
