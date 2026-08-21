@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --check addon.js && node --check server.js && node --check public/homepage.js"
+    "test": "node --check addon.js && node --check server.js && node --check worker.js && node --check public/homepage.js"
   },
   "keywords": [
     "stremio",
