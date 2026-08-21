@@ -1,6 +1,5 @@
 import { addonBuilder } from "@stremio-addon/compat";
 import axios from "axios";
-import "dotenv/config";
 
 const CONFIG = {
   TMDB_API_KEY: process.env.TMDB_API_KEY,
